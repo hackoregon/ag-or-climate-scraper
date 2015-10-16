@@ -1,4 +1,12 @@
-#' R notebook to gather data from the Oregon Climate Service website (<http://ocs.oregonstate.edu/>)
+#' ---
+#' title: "Oregon Climate Service Data Acquisition"
+#' author: "M. Edward (Ed) Borasky"
+#' date: "2015-10-16"
+#' output:
+#'   md_document:
+#'     variant: markdown_github
+#' ---
+
 for (p in c("rvest")) {
   if (!require(p, character.only = TRUE)) {
     install.packages(p)
