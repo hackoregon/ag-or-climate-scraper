@@ -21,5 +21,4 @@ session <- html_session(
 #' ## Loop over the county data pages
 for (i in 4:39) {
   page <- session %>% follow_link(i)
-  print(page)
 }
