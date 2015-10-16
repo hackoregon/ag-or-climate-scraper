@@ -1,3 +1,6 @@
+Install and load required library packages
+------------------------------------------
+
 ``` r
 for (p in c("rvest")) {
   if (!require(p, character.only = TRUE)) {
@@ -10,9 +13,18 @@ for (p in c("rvest")) {
     ## Loading required package: rvest
     ## Loading required package: xml2
 
+Fetch the main page as an rvest session
+---------------------------------------
+
 ``` r
 session <- html_session(
   "http://www.ocs.oregonstate.edu/county_climate/county_climate.html")
+```
+
+Loop over the county data pages
+-------------------------------
+
+``` r
 for (i in 4:39) {
   page <- session %>% follow_link(i)
   print(page)
