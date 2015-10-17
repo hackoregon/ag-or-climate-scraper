@@ -24,5 +24,10 @@ for (i in 4:39) {
   text <- content(page$response, as = "text")
   county <- sub("^.*<title>", "", text)
   county <- sub(" County Climate.*$", "", county)
-  print(county)
+  if (county != "Grant") {
+    precip_node <- html_node(page, css = "tr:nth-child(1) table")
+    precip_table <- html_table(precip_node, header = TRUE)
+    precip_table$County <- county
+    print(precip_table)
+  }
 }
