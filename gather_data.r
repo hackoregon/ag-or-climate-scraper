@@ -8,7 +8,7 @@
 #' ---
 
 #' ## Install and load required library packages
-for (p in c("rvest")) {
+for (p in c("rvest", "httr")) {
   if (!require(p, character.only = TRUE)) {
     install.packages(p)
   }
@@ -21,4 +21,8 @@ session <- html_session(
 #' ## Loop over the county data pages
 for (i in 4:39) {
   page <- session %>% follow_link(i)
+  text <- content(page$response, as = "text")
+  county <- sub("^.*<title>", "", text)
+  county <- sub(" County Climate.*$", "", county)
+  print(county)
 }
