@@ -2,7 +2,9 @@
 title: "Using `rnoaa` to Acquire Climate Data"
 author: "M. Edward (Ed) Borasky"
 date: "October 20, 2015"
-output: html_document
+output: 
+  md_document:
+    variant: markdown_github
 ---
 
 ## Install the library packages if needed
@@ -41,13 +43,16 @@ if (file.exists("fipscodes.csv")) {
 ## Make the station table
 ```{r echo=FALSE}
 
-# function for a single county
+# define a function to fetch the stations in a single county
+dataset <- "NORMAL_MLY" # the "monthly normals" dataset
 county_stations <- function(fipscodes, irow) {
   fips <- fipscodes$fips[irow]
-  work <- ncdc_stations(datasetid = "NORMAL_MLY", token = cdo_token, limit = 1000,
-                        locationid = paste("FIPS", fips, sep = ":"))
+  work <- ncdc_stations(
+    datasetid = dataset, token = cdo_token, limit = 1000, 
+    locationid = paste("FIPS", fips, sep = ":"))
   work <- work$data
   work$fips <- fips
+  colnames(work)[10] <- "station_id"
   work <- dplyr::inner_join(fipscodes, work, by = "fips")
   return(work)
 }
@@ -55,6 +60,7 @@ county_stations <- function(fipscodes, irow) {
 if (file.exists("station_table.csv")) {
   station_table <- read.csv("station_table.csv", stringsAsFactors = FALSE)
 } else {
+
   # first county
   print(paste("Fetching stations for county =", fipscodes$county[1]))
   station_table <- county_stations(fipscodes, 1)
@@ -62,8 +68,8 @@ if (file.exists("station_table.csv")) {
   # rest of the counties
   for (irow in 2:(nrow(fipscodes))) {
     print(paste("Fetching stations for county =", fipscodes$county[irow]))
-    station_table <- dplyr::bind_rows(station_table, 
-                                      county_stations(fipscodes, irow))
+    station_table <- dplyr::bind_rows(
+      station_table, county_stations(fipscodes, irow))
   }
 
   # save
@@ -74,14 +80,21 @@ if (file.exists("station_table.csv")) {
 ## Make the data table
 ```{r echo=FALSE}
 
-# function for a single station
+# function to fetch the data for a single station
+start <- "2010-01-01" # required start date parameter
+end <- "2010-01-12" # required end date parameter
+
+# data types (variables) to fetch
+# "MLY-GRDD-BASE50" is growing degree days with 50 degrees Fahrenheit as the base
+# "MLY-PRCP-NORMAL" is precipitation in *hundredths* of an inch
+variables <- c("MLY-GRDD-BASE50", "MLY-PRCP-NORMAL")
 station_data <- function(station_table, irow) {
   station <- station_table$id[irow]
-  work <- ncdc(datasetid = "NORMAL_MLY", startdate = "2010-01-01",
-               enddate = "2010-12-01", token = cdo_token, limit = 1000,
-               stationid = station, datatypeid = c("MLY-GRDD-BASE50",
-                                                   "MLY-PRCP-NORMAL"))
+  work <- ncdc(
+    datasetid = dataset, startdate = start, enddate = end,
+    token = cdo_token, limit = 1000, stationid = station, datatypeid = variables)
   work <- work$data
+  colnames(work)[3] <- "station_id"
   return(work)
 }
 
@@ -98,10 +111,7 @@ if (file.exists("data_table.csv")) {
     print(paste("Fetching data for station", station_table$id[irow]))
     data_table <- dplyr::bind_rows(data_table, station_data(station_table, irow))
   }
-
-  # fix column name and join to station metadata
-  colnames(data_table)[3] <- "id"
-  data_table <- dplyr::inner_join(data_table, station_table, by = "id")
+  data_table <- dplyr::inner_join(data_table, station_table, by = "station_id")
 
   # save
   write.csv(data_table, file = "data_table.csv", row.names = FALSE)
@@ -120,9 +130,20 @@ station_summary <-
   data_table %>% 
   dplyr::group_by(datatype, county, id) %>% 
   dplyr::summarize(annual_total = sum(value), months = length(value))
+write.csv(station_summary, file = "station_summary.csv", row.names = FALSE)
 county_summary <-
   station_summary %>% 
   dplyr::group_by(datatype, county) %>% 
-  dplyr::summarize(county_average = mean(annual_total), 
-                   stations = length(annual_total))
+  dplyr::summarize(
+    county_average = mean(annual_total), stations = length(annual_total))
+
+# round for display
+county_summary$value[datatype == "MLY-GRDD-BASE50"] <-
+  round(county_summary$value[datatype == "MLY-GRDD-BASE50"], digits = 0)
+
+# convert precipitation to inches
+county_summary$value[datatype == "MLY-PRCP-NORMAL"] <-
+  round(
+    0.01 * county_summary$value[datatype == "MLY-PRCP-NORMAL"], digits = 2)
+write.csv(county_summary, file = "county_summary.csv", row.names = FALSE)
 ```
