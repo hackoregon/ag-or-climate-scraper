@@ -1,0 +1,96 @@
+---
+title: "Using `rnoaa` to Acquire Climate Data"
+author: "M. Edward (Ed) Borasky"
+date: "October 20, 2015"
+output: html_document
+---
+
+## Install the library packages if needed
+```{r echo=FALSE}
+if (!require(rnoaa)) {
+  install.packages('rnoaa')
+}
+if (!require(dplyr)) {
+  install.packages('dplyr')
+}
+```
+
+## Load the libraries and FIPS code dataset
+```{r echo=FALSE}
+require(rnoaa)
+data(fipscodes)
+require(dplyr)
+fipscodes <- dplyr::filter(fipscodes, state == "Oregon")
+fipscodes <- dplyr::select(fipscodes, -fips_state, -fips_county)
+
+# save fipscodes as a CSV
+write.csv(fipscodes, file = "fipscodes.csv", row.names = FALSE)
+```
+
+## Get an API token
+1. Go to <http://www.ncdc.noaa.gov/cdo-web/token>.
+1. Enter your email address in the form.
+1. Press "Submit".
+1. Get the API token from your email.
+1. Store it in global variable `cdo_token`.
+
+## Make the station table
+```{r echo=FALSE}
+
+# function for a single county
+county_stations <- function(fipscodes, irow) {
+  fips <- fipscodes$fips[irow]
+  work <- ncdc_stations(datasetid = "NORMAL_MLY", token = cdo_token, limit = 1000,
+                        locationid = paste("FIPS", fips, sep = ":"))
+  work <- work$data
+  work$fips <- fips
+  work <- dplyr::inner_join(fipscodes, work, by = "fips")
+  return(work)
+}
+
+# first county
+print(paste("Fetching stations for county =", fipscodes$county[1]))
+station_table <- county_stations(fipscodes, 1)
+
+# rest of the counties
+for (irow in 2:(nrow(fipscodes))) {
+  print(paste("Fetching stations for county =", fipscodes$county[irow]))
+  station_table <- dplyr::bind_rows(station_table, 
+                                    county_stations(fipscodes, irow))
+}
+
+# save
+write.csv(station_table, file = "station_table.csv", row.names = FALSE)
+```
+
+## Make the data table
+```{r echo=FALSE}
+
+# function for a single station
+station_data <- function(station_table, irow) {
+  station <- station_table$id[irow]
+  work <- ncdc(datasetid = "NORMAL_MLY", startdate = "2010-01-01",
+               enddate = "2010-12-01", token = cdo_token, limit = 1000,
+               stationid = station, datatypeid = c("MLY-GRDD-TB4886",
+                                                   "MLY-PRCP-NORMAL"))
+  work <- work$data
+  return(work)
+}
+
+# first station
+print(paste("Fetching data for station", station_table$id[1]))
+data_table <- station_data(station_table, 1)
+
+# rest of the counties
+for (irow in 2:(nrow(station_table))) {
+  print(paste("Fetching data for station", station_table$id[irow]))
+  data_table <- dplyr::bind_rows(data_table, station_data(station_table, irow))
+}
+
+# fix column name and join to station metadata
+colnames(data_table)[3] <- "id"
+data_table <- dplyr::inner_join(data_table, station_table, by = "id")
+
+# save
+write.csv(data_table, file = "data_table.csv", row.names = FALSE)
+```
