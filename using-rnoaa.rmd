@@ -77,11 +77,9 @@ if (file.exists("station_table.csv")) {
 # function for a single station
 station_data <- function(station_table, irow) {
   station <- station_table$id[irow]
-
-  #switch to base = 50 for comparison with Oregon state data
   work <- ncdc(datasetid = "NORMAL_MLY", startdate = "2010-01-01",
                enddate = "2010-12-01", token = cdo_token, limit = 1000,
-               stationid = station, datatypeid = c("MLY-GRDD-TB4886",
+               stationid = station, datatypeid = c("MLY-GRDD-BASE50",
                                                    "MLY-PRCP-NORMAL"))
   work <- work$data
   return(work)
