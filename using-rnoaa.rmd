@@ -77,6 +77,8 @@ if (file.exists("station_table.csv")) {
 # function for a single station
 station_data <- function(station_table, irow) {
   station <- station_table$id[irow]
+
+  #switch to base = 50 for comparison with Oregon state data
   work <- ncdc(datasetid = "NORMAL_MLY", startdate = "2010-01-01",
                enddate = "2010-12-01", token = cdo_token, limit = 1000,
                stationid = station, datatypeid = c("MLY-GRDD-TB4886",
@@ -85,20 +87,44 @@ station_data <- function(station_table, irow) {
   return(work)
 }
 
-# first station
-print(paste("Fetching data for station", station_table$id[1]))
-data_table <- station_data(station_table, 1)
+if (file.exists("data_table.csv")) {
+  data_table <- read.csv("data_table.csv", stringsAsFactors = FALSE)
+} else {
+  
+  # first station
+  print(paste("Fetching data for station", station_table$id[1]))
+  data_table <- station_data(station_table, 1)
 
-# rest of the counties
-for (irow in 2:(nrow(station_table))) {
-  print(paste("Fetching data for station", station_table$id[irow]))
-  data_table <- dplyr::bind_rows(data_table, station_data(station_table, irow))
+  # rest of the counties
+  for (irow in 2:(nrow(station_table))) {
+    print(paste("Fetching data for station", station_table$id[irow]))
+    data_table <- dplyr::bind_rows(data_table, station_data(station_table, irow))
+  }
+
+  # fix column name and join to station metadata
+  colnames(data_table)[3] <- "id"
+  data_table <- dplyr::inner_join(data_table, station_table, by = "id")
+
+  # save
+  write.csv(data_table, file = "data_table.csv", row.names = FALSE)
 }
+```
 
-# fix column name and join to station metadata
-colnames(data_table)[3] <- "id"
-data_table <- dplyr::inner_join(data_table, station_table, by = "id")
+## Make the result table
 
-# save
-write.csv(data_table, file = "data_table.csv", row.names = FALSE)
+```{r echo=FALSE}
+
+# replace -7777 with 0
+data_table$value[data_table$value == -7777] <- 0
+
+# summary input table
+station_summary <- 
+  data_table %>% 
+  dplyr::group_by(datatype, county, id) %>% 
+  dplyr::summarize(annual_total = sum(value), months = length(value))
+county_summary <-
+  station_summary %>% 
+  dplyr::group_by(datatype, county) %>% 
+  dplyr::summarize(county_average = mean(annual_total), 
+                   stations = length(annual_total))
 ```
