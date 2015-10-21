@@ -18,13 +18,17 @@ if (!require(dplyr)) {
 ## Load the libraries and FIPS code dataset
 ```{r echo=FALSE}
 require(rnoaa)
-data(fipscodes)
 require(dplyr)
-fipscodes <- dplyr::filter(fipscodes, state == "Oregon")
-fipscodes <- dplyr::select(fipscodes, -fips_state, -fips_county)
+if (file.exists("fipscodes.csv")) {
+  fipscodes <- read.csv("fipscodes.csv", stringsAsFactors = FALSE)
+} else {
+  data(fipscodes)
+  fipscodes <- dplyr::filter(fipscodes, state == "Oregon")
+  fipscodes <- dplyr::select(fipscodes, -fips_state, -fips_county)
 
-# save fipscodes as a CSV
-write.csv(fipscodes, file = "fipscodes.csv", row.names = FALSE)
+  # save fipscodes as a CSV
+  write.csv(fipscodes, file = "fipscodes.csv", row.names = FALSE)
+}
 ```
 
 ## Get an API token
@@ -48,19 +52,23 @@ county_stations <- function(fipscodes, irow) {
   return(work)
 }
 
-# first county
-print(paste("Fetching stations for county =", fipscodes$county[1]))
-station_table <- county_stations(fipscodes, 1)
+if (file.exists("station_table.csv")) {
+  station_table <- read.csv("station_table.csv", stringsAsFactors = FALSE)
+} else {
+  # first county
+  print(paste("Fetching stations for county =", fipscodes$county[1]))
+  station_table <- county_stations(fipscodes, 1)
 
-# rest of the counties
-for (irow in 2:(nrow(fipscodes))) {
-  print(paste("Fetching stations for county =", fipscodes$county[irow]))
-  station_table <- dplyr::bind_rows(station_table, 
-                                    county_stations(fipscodes, irow))
+  # rest of the counties
+  for (irow in 2:(nrow(fipscodes))) {
+    print(paste("Fetching stations for county =", fipscodes$county[irow]))
+    station_table <- dplyr::bind_rows(station_table, 
+                                      county_stations(fipscodes, irow))
+  }
+
+  # save
+  write.csv(station_table, file = "station_table.csv", row.names = FALSE)
 }
-
-# save
-write.csv(station_table, file = "station_table.csv", row.names = FALSE)
 ```
 
 ## Make the data table
