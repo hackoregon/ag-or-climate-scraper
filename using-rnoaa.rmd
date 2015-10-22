@@ -144,6 +144,10 @@ county_summary$value[datatype == "MLY-GRDD-BASE50"] <-
   round(county_summary$value[datatype == "MLY-GRDD-BASE50"], digits = 0)
 
 # convert precipitation to inches
+# NORMAL MLY documentation - Mark Lackey.pdf
+# Hundredths of inches for average monthly/seasonal/annual precipitation,
+# month-to-date/year-to-date precipitation, and percentiles of precipitation.
+# e.g., "1" is 0.01" and "1486" is 14.86"
 county_summary$value[datatype == "MLY-PRCP-NORMAL"] <-
   round(
     0.01 * county_summary$value[datatype == "MLY-PRCP-NORMAL"], digits = 2)
