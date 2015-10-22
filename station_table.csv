@@ -1,4 +1,4 @@
-"state","county","fips","elevation","mindate","maxdate","latitude","name","datacoverage","id","elevationUnit","longitude"
+"state","county","fips","elevation","mindate","maxdate","latitude","name","datacoverage","station_id","elevationUnit","longitude"
 "Oregon","Baker",41001,808.6,"2010-01-01","2010-12-01",44.8773,"HALFWAY, OR US",1,"GHCND:USC00353604","METERS",-117.1095
 "Oregon","Baker",41001,643.1,"2010-01-01","2010-12-01",44.3564,"HUNTINGTON, OR US",1,"GHCND:USC00354098","METERS",-117.2549
 "Oregon","Baker",41001,675.1,"2010-01-01","2010-12-01",44.7656,"RICHLAND, OR US",1,"GHCND:USC00357160","METERS",-117.1597
