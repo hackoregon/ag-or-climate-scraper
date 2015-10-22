@@ -52,7 +52,7 @@ county_stations <- function(fipscodes, irow) {
     locationid = paste("FIPS", fips, sep = ":"))
   work <- work$data
   work$fips <- fips
-  colnames(work)[10] <- "station_id"
+  colnames(work)[7] <- "station_id"
   work <- dplyr::inner_join(fipscodes, work, by = "fips")
   return(work)
 }
@@ -82,14 +82,14 @@ if (file.exists("station_table.csv")) {
 
 # function to fetch the data for a single station
 start <- "2010-01-01" # required start date parameter
-end <- "2010-01-12" # required end date parameter
+end <- "2010-12-01" # required end date parameter
 
 # data types (variables) to fetch
 # "MLY-GRDD-BASE50" is growing degree days with 50 degrees Fahrenheit as the base
 # "MLY-PRCP-NORMAL" is precipitation in *hundredths* of an inch
 variables <- c("MLY-GRDD-BASE50", "MLY-PRCP-NORMAL")
 station_data <- function(station_table, irow) {
-  station <- station_table$id[irow]
+  station <- station_table$station_id[irow]
   work <- ncdc(
     datasetid = dataset, startdate = start, enddate = end,
     token = cdo_token, limit = 1000, stationid = station, datatypeid = variables)
@@ -103,15 +103,14 @@ if (file.exists("data_table.csv")) {
 } else {
   
   # first station
-  print(paste("Fetching data for station", station_table$id[1]))
+  print(paste("Fetching data for station", station_table$station_id[1]))
   data_table <- station_data(station_table, 1)
 
   # rest of the counties
   for (irow in 2:(nrow(station_table))) {
-    print(paste("Fetching data for station", station_table$id[irow]))
+    print(paste("Fetching data for station", station_table$station_id[irow]))
     data_table <- dplyr::bind_rows(data_table, station_data(station_table, irow))
   }
-  data_table <- dplyr::inner_join(data_table, station_table, by = "station_id")
 
   # save
   write.csv(data_table, file = "data_table.csv", row.names = FALSE)
@@ -127,10 +126,14 @@ if (file.exists("data_table.csv")) {
 # NORMAL MLY documentation - Mark Lackey.pdf
 data_table$value[data_table$value == -7777] <- 0
 
+# tag data with station metadata
+tagged_data <- dplyr::full_join(data_table, station_table, by = "station_id")
+write.csv(tagged_data, file = "tagged_data.csv", row.names = FALSE)
+
 # summary input table
 station_summary <- 
-  data_table %>% 
-  dplyr::group_by(datatype, county, id) %>% 
+  tagged_data %>%
+  dplyr::group_by(datatype, county, station_id) %>% 
   dplyr::summarize(annual_total = sum(value), months = length(value))
 write.csv(station_summary, file = "station_summary.csv", row.names = FALSE)
 county_summary <-
@@ -139,17 +142,26 @@ county_summary <-
   dplyr::summarize(
     county_average = mean(annual_total), stations = length(annual_total))
 
-# round for display
-county_summary$value[datatype == "MLY-GRDD-BASE50"] <-
-  round(county_summary$value[datatype == "MLY-GRDD-BASE50"], digits = 0)
+# make final display tables
+growing_degree_days <-
+  county_summary %>%
+  dplyr::filter(datatype == "MLY-GRDD-BASE50")
+growing_degree_days$county_average <- 
+  round(growing_degree_days$county_average, digits = 0)
+write.csv(
+  growing_degree_days, file = "growing_degree_days.csv", row.names = FALSE)
+
+precipitation_inches <-
+  county_summary %>%
+  dplyr::filter(datatype == "MLY-PRCP-NORMAL")
 
 # convert precipitation to inches
 # NORMAL MLY documentation - Mark Lackey.pdf
 # Hundredths of inches for average monthly/seasonal/annual precipitation,
 # month-to-date/year-to-date precipitation, and percentiles of precipitation.
 # e.g., "1" is 0.01" and "1486" is 14.86"
-county_summary$value[datatype == "MLY-PRCP-NORMAL"] <-
-  round(
-    0.01 * county_summary$value[datatype == "MLY-PRCP-NORMAL"], digits = 2)
-write.csv(county_summary, file = "county_summary.csv", row.names = FALSE)
+precipitation_inches$county_average <- 
+  round(0.01 * precipitation_inches$county_average, digits = 2)
+write.csv(
+  precipitation_inches, file = "precipitation_inches.csv", row.names = FALSE)
 ```
