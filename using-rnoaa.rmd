@@ -8,7 +8,7 @@ output:
 ---
 
 ## Install the library packages if needed
-```{r echo=FALSE}
+```{r}
 if (!require(rnoaa)) {
   install.packages('rnoaa')
 }
@@ -18,7 +18,7 @@ if (!require(dplyr)) {
 ```
 
 ## Load the libraries and FIPS code dataset
-```{r echo=FALSE}
+```{r}
 require(rnoaa)
 require(dplyr)
 if (file.exists("fipscodes.csv")) {
@@ -41,7 +41,7 @@ if (file.exists("fipscodes.csv")) {
 1. Store it in global variable `cdo_token`.
 
 ## Make the station table
-```{r echo=FALSE}
+```{r}
 
 # define a function to fetch the stations in a single county
 dataset <- "NORMAL_MLY" # the "monthly normals" dataset
@@ -78,7 +78,7 @@ if (file.exists("station_table.csv")) {
 ```
 
 ## Make the data table
-```{r echo=FALSE}
+```{r}
 
 # function to fetch the data for a single station
 start <- "2010-01-01" # required start date parameter
@@ -119,7 +119,7 @@ if (file.exists("data_table.csv")) {
 
 ## Make the result table
 
-```{r echo=FALSE}
+```{r}
 
 # replace -7777 with zerp - the official definition of "-7777" is
 # "-7777: a non-zero value that would round to zero"
