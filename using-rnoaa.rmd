@@ -122,7 +122,9 @@ if (file.exists("data_table.csv")) {
 
 ```{r echo=FALSE}
 
-# replace -7777 with 0
+# replace -7777 with zerp - the official definition of "-7777" is
+# "-7777: a non-zero value that would round to zero"
+# NORMAL MLY documentation - Mark Lackey.pdf
 data_table$value[data_table$value == -7777] <- 0
 
 # summary input table
